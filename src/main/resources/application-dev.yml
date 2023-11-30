@@ -87,7 +87,7 @@ media:
   # [可选] zlm服务器的http.sslport, 置空使用zlm配置文件配置
   http-ssl-port: 1443
   # [可选] zlm服务器的hook.admin_params=secret
-  secret: 10000
+  secret: weidian
   # 启用多端口模式, 多端口模式使用端口区分每路流，兼容性更好。 单端口使用流的ssrc区分， 点播超时建议使用多端口测试
   rtp:
     # [可选] 是否启用多端口模式, 开启后会在portRange范围内选择端口用于媒体流传输
