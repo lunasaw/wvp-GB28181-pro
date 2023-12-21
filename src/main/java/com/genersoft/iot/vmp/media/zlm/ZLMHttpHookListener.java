@@ -244,6 +244,7 @@ public class ZLMHttpHookListener {
 
 
         HookResultForOnPublish result = HookResultForOnPublish.SUCCESS();
+        result.setEnable_audio(true);
         taskExecutor.execute(() -> {
             ZlmHttpHookSubscribe.Event subscribe = this.subscribe.sendNotify(HookType.on_publish, json);
             if (subscribe != null) {
@@ -263,14 +264,18 @@ public class ZLMHttpHookListener {
         }
 
         // 国标流
-        if ("rtp".equals(param.getApp())) {
-            String ssrc = String.format("%010d", Long.parseLong(param.getStream(), 16));
-            InviteInfo inviteInfo = inviteStreamService.getInviteInfoBySSRC(ssrc);
+        if ("rtp".equals(param.getApp()) ) {
+
+            InviteInfo inviteInfo = inviteStreamService.getInviteInfoByStream(null, param.getStream());
 
             // 单端口模式下修改流 ID
-            if (!mediaInfo.isRtpEnable() && inviteInfo != null) {
-                result.setStream_replace(inviteInfo.getStream());
-                logger.info("[ZLM HOOK]推流鉴权 stream: {} 替换为 {}", param.getStream(), inviteInfo.getStream());
+            if (!mediaInfo.isRtpEnable() && inviteInfo == null) {
+                String ssrc = String.format("%010d", Long.parseLong(param.getStream(), 16));
+                inviteInfo = inviteStreamService.getInviteInfoBySSRC(ssrc);
+                if (inviteInfo != null) {
+                    result.setStream_replace(inviteInfo.getStream());
+                    logger.info("[ZLM HOOK]推流鉴权 stream: {} 替换为 {}", param.getStream(), inviteInfo.getStream());
+                }
             }
 
             // 设置音频信息及录制信息
@@ -530,11 +535,15 @@ public class ZLMHttpHookListener {
                         if (info != null) {
                             cmder.streamByeCmd(device, inviteInfo.getChannelId(),
                                     inviteInfo.getStream(), null);
+                        }else {
+                            logger.info("[无人观看] 未找到设备的点播信息： {}， 流：{}", inviteInfo.getDeviceId(), param.getStream());
                         }
                     } catch (InvalidArgumentException | ParseException | SipException |
                              SsrcTransactionNotFoundException e) {
                         logger.error("[无人观看]点播， 发送BYE失败 {}", e.getMessage());
                     }
+                }else {
+                    logger.info("[无人观看] 未找到设备： {}，流：{}", inviteInfo.getDeviceId(), param.getStream());
                 }
 
                 inviteStreamService.removeInviteInfo(inviteInfo.getType(), inviteInfo.getDeviceId(),
