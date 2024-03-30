@@ -33,13 +33,14 @@ public interface ICloudRecordService {
     /**
      * 添加合并任务
      */
-    String addTask(String app, String stream, String mediaServerId, String startTime, String endTime, String callId, String remoteHost);
+    String addTask(String app, String stream, MediaServerItem mediaServerItem, String startTime,
+                   String endTime, String callId, String remoteHost, boolean filterMediaServer);
 
 
     /**
      * 查询合并任务列表
      */
-    JSONArray queryTask(String app, String stream, String callId, String taskId, String mediaServerId, Boolean isEnd);
+    JSONArray queryTask(String app, String stream, String callId, String taskId, String mediaServerId, Boolean isEnd, String scheme);
 
     /**
      * 收藏视频，收藏的视频过期不会删除

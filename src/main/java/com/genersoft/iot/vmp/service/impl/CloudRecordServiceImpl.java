@@ -2,6 +2,7 @@ package com.genersoft.iot.vmp.service.impl;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.dynamic.datasource.annotation.DS;
 import com.genersoft.iot.vmp.conf.exception.ControllerException;
 import com.genersoft.iot.vmp.gb28181.session.VideoStreamSessionManager;
 import com.genersoft.iot.vmp.media.zlm.AssistRESTfulUtils;
@@ -29,6 +30,7 @@ import java.time.*;
 import java.util.*;
 
 @Service
+@DS("share")
 public class CloudRecordServiceImpl implements ICloudRecordService {
 
     private final static Logger logger = LoggerFactory.getLogger(CloudRecordServiceImpl.class);
@@ -109,23 +111,11 @@ public class CloudRecordServiceImpl implements ICloudRecordService {
     }
 
     @Override
-    public String addTask(String app, String stream, String mediaServerId, String startTime, String endTime, String callId, String remoteHost) {
+    public String addTask(String app, String stream, MediaServerItem mediaServerItem, String startTime, String endTime,
+                          String callId, String remoteHost, boolean filterMediaServer) {
         // 参数校验
         assert app != null;
         assert stream != null;
-        MediaServerItem mediaServerItem = null;
-        if (mediaServerId == null) {
-            mediaServerItem = mediaServerService.getDefaultMediaServer();
-        }else {
-            mediaServerItem = mediaServerService.getOne(mediaServerId);
-        }
-        if (mediaServerItem == null) {
-            throw new ControllerException(ErrorCode.ERROR100.getCode(), "未找到可用的流媒体");
-        }else {
-            if (remoteHost == null) {
-                remoteHost = "http://" + mediaServerItem.getStreamIp() + ":" + mediaServerItem.getRecordAssistPort();
-            }
-        }
         if (mediaServerItem.getRecordAssistPort() == 0) {
             throw new ControllerException(ErrorCode.ERROR100.getCode(), "为配置Assist服务");
         }
@@ -141,7 +131,8 @@ public class CloudRecordServiceImpl implements ICloudRecordService {
         List<MediaServerItem> mediaServers = new ArrayList<>();
         mediaServers.add(mediaServerItem);
         // 检索相关的录像文件
-        List<String> filePathList = cloudRecordServiceMapper.queryRecordFilePathList(app, stream, startTimeStamp, endTimeStamp, callId, mediaServers);
+        List<String> filePathList = cloudRecordServiceMapper.queryRecordFilePathList(app, stream, startTimeStamp,
+                endTimeStamp, callId, filterMediaServer ? mediaServers : null);
         if (filePathList == null || filePathList.isEmpty()) {
             throw new ControllerException(ErrorCode.ERROR100.getCode(), "未检索到视频文件");
         }
@@ -153,7 +144,8 @@ public class CloudRecordServiceImpl implements ICloudRecordService {
     }
 
     @Override
-    public JSONArray queryTask(String app, String stream, String callId, String taskId, String mediaServerId, Boolean isEnd) {
+    public JSONArray queryTask(String app, String stream, String callId, String taskId, String mediaServerId,
+                               Boolean isEnd, String scheme) {
         MediaServerItem mediaServerItem = null;
         if (mediaServerId == null) {
             mediaServerItem = mediaServerService.getDefaultMediaServer();
@@ -163,9 +155,10 @@ public class CloudRecordServiceImpl implements ICloudRecordService {
         if (mediaServerItem == null) {
             throw new ControllerException(ErrorCode.ERROR100.getCode(), "未找到可用的流媒体");
         }
-        JSONObject result =  assistRESTfulUtils.queryTaskList(mediaServerItem, app, stream, callId, taskId, isEnd);
-        if (result.getInteger("code") != 0) {
-            throw new ControllerException(result.getInteger("code"), result.getString("msg"));
+
+        JSONObject result =  assistRESTfulUtils.queryTaskList(mediaServerItem, app, stream, callId, taskId, isEnd, scheme);
+        if (result == null || result.getInteger("code") != 0) {
+            throw new ControllerException(ErrorCode.ERROR100.getCode(), result == null ? "查询任务列表失败" : result.getString("msg"));
         }
         return result.getJSONArray("data");
     }

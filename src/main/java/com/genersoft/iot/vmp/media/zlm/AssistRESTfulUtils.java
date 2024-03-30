@@ -3,6 +3,7 @@ package com.genersoft.iot.vmp.media.zlm;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.genersoft.iot.vmp.media.zlm.dto.MediaServerItem;
+import com.genersoft.iot.vmp.utils.SSLSocketClientUtil;
 import okhttp3.*;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.jetbrains.annotations.NotNull;
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -36,7 +38,7 @@ public class AssistRESTfulUtils {
     private OkHttpClient getClient(){
         return getClient(null);
     }
-    
+
     private OkHttpClient getClient(Integer readTimeOut){
         if (client == null) {
             if (readTimeOut == null) {
@@ -57,6 +59,10 @@ public class AssistRESTfulUtils {
                 // OkHttp進行添加攔截器loggingInterceptor
                 httpClientBuilder.addInterceptor(logging);
             }
+            X509TrustManager manager = SSLSocketClientUtil.getX509TrustManager();
+            // 设置ssl
+            httpClientBuilder.sslSocketFactory(SSLSocketClientUtil.getSocketFactory(manager), manager);
+            httpClientBuilder.hostnameVerifier(SSLSocketClientUtil.getHostnameVerifier());//忽略校验
             client = httpClientBuilder.build();
         }
         return client;
@@ -74,11 +80,11 @@ public class AssistRESTfulUtils {
             logger.warn("未启用Assist服务");
             return null;
         }
-        StringBuffer stringBuffer = new StringBuffer();
-        stringBuffer.append(String.format("http://%s:%s/%s",  mediaServerItem.getIp(), mediaServerItem.getRecordAssistPort(), api));
+        StringBuilder stringBuffer = new StringBuilder();
+        stringBuffer.append(api);
         JSONObject responseJSON = null;
 
-        if (param != null && param.keySet().size() > 0) {
+        if (param != null && !param.keySet().isEmpty()) {
             stringBuffer.append("?");
             int index = 1;
             for (String key : param.keySet()){
@@ -93,6 +99,7 @@ public class AssistRESTfulUtils {
         }
 
         String url = stringBuffer.toString();
+        logger.info("[访问assist]： {}", url);
         Request request = new Request.Builder()
                 .get()
                 .url(url)
@@ -148,13 +155,15 @@ public class AssistRESTfulUtils {
         return responseJSON;
     }
 
-    public JSONObject sendPost(MediaServerItem mediaServerItem, String api, JSONObject param, ZLMRESTfulUtils.RequestCallback callback, Integer readTimeOut) {
+    public JSONObject sendPost(MediaServerItem mediaServerItem, String url,
+                               JSONObject param, ZLMRESTfulUtils.RequestCallback callback,
+                               Integer readTimeOut) {
         OkHttpClient client = getClient(readTimeOut);
 
         if (mediaServerItem == null) {
             return null;
         }
-        String url = String.format("http://%s:%s/%s",  mediaServerItem.getIp(), mediaServerItem.getRecordAssistPort(), api);
+        logger.info("[访问assist]： {}, 参数： {}", url, param);
         JSONObject responseJSON = new JSONObject();
         //-2自定义流媒体 调用错误码
         responseJSON.put("code",-2);
@@ -242,7 +251,7 @@ public class AssistRESTfulUtils {
 
     public JSONObject addTask(MediaServerItem mediaServerItem, String app, String stream, String startTime,
                               String endTime, String callId, List<String> filePathList, String remoteHost) {
-        
+
         JSONObject videoTaskInfoJSON = new JSONObject();
         videoTaskInfoJSON.put("app", app);
         videoTaskInfoJSON.put("stream", stream);
@@ -253,11 +262,12 @@ public class AssistRESTfulUtils {
         if (!ObjectUtils.isEmpty(remoteHost)) {
             videoTaskInfoJSON.put("remoteHost", remoteHost);
         }
-
-        return sendPost(mediaServerItem, "api/record/file/download/task/add", videoTaskInfoJSON, null, 30);
+        String urlStr = String.format("%s/api/record/file/download/task/add",  remoteHost);;
+        return sendPost(mediaServerItem, urlStr, videoTaskInfoJSON, null, 30);
     }
 
-    public JSONObject queryTaskList(MediaServerItem mediaServerItem, String app, String stream, String callId,  String taskId, Boolean isEnd) {
+    public JSONObject queryTaskList(MediaServerItem mediaServerItem, String app, String stream, String callId,
+                                    String taskId, Boolean isEnd, String scheme) {
         Map<String, Object> param = new HashMap<>();
         if (!ObjectUtils.isEmpty(app)) {
             param.put("app", app);
@@ -274,7 +284,8 @@ public class AssistRESTfulUtils {
         if (!ObjectUtils.isEmpty(isEnd)) {
             param.put("isEnd", isEnd);
         }
-
-        return sendGet(mediaServerItem, "api/record/file/download/task/list", param, null);
+        String urlStr = String.format("%s://%s:%s/api/record/file/download/task/list",
+                scheme, mediaServerItem.getIp(), mediaServerItem.getRecordAssistPort());;
+        return sendGet(mediaServerItem, urlStr, param, null);
     }
 }

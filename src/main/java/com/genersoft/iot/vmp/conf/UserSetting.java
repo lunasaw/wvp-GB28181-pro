@@ -23,7 +23,7 @@ public class UserSetting {
 
     private Integer playTimeout = 18000;
 
-    private int platformPlayTimeout = 60000;
+    private int platformPlayTimeout = 20000;
 
     private Boolean interfaceAuthentication = Boolean.TRUE;
 
@@ -33,7 +33,7 @@ public class UserSetting {
 
     private Boolean logInDatabase = Boolean.TRUE;
 
-    private Boolean usePushingAsStatus = Boolean.TRUE;
+    private Boolean usePushingAsStatus = Boolean.FALSE;
 
     private Boolean useSourceIpAsStreamIp = Boolean.FALSE;
 
@@ -51,12 +51,14 @@ public class UserSetting {
 
     private Boolean refuseChannelStatusChannelFormNotify = Boolean.FALSE;
 
-    private Boolean deviceStatusNotify = Boolean.FALSE;
+    private Boolean deviceStatusNotify = Boolean.TRUE;
     private Boolean useCustomSsrcForParentInvite = Boolean.TRUE;
 
     private String serverId = "000000";
 
     private String thirdPartyGBIdReg = "[\\s\\S]*";
+
+    private String broadcastForPlatform = "UDP";
 
     private String civilCodeFile = "classpath:civilCode.csv";
 
@@ -208,6 +210,14 @@ public class UserSetting {
 
     public void setSyncChannelOnDeviceOnline(Boolean syncChannelOnDeviceOnline) {
         this.syncChannelOnDeviceOnline = syncChannelOnDeviceOnline;
+    }
+
+    public String getBroadcastForPlatform() {
+        return broadcastForPlatform;
+    }
+
+    public void setBroadcastForPlatform(String broadcastForPlatform) {
+        this.broadcastForPlatform = broadcastForPlatform;
     }
 
     public Boolean getSipUseSourceIpAsRemoteAddress() {

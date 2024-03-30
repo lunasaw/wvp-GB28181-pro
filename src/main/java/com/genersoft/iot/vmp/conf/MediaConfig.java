@@ -84,7 +84,7 @@ public class MediaConfig{
     @Value("${media.record-day:7}")
     private Integer recordDay;
 
-    @Value("${media.record-path}")
+    @Value("${media.record-path:}")
     private String recordPath;
 
     public String getId() {
@@ -97,7 +97,7 @@ public class MediaConfig{
 
     public String getHookIp() {
         if (ObjectUtils.isEmpty(hookIp)){
-            return sipIp.split(",")[0];
+            return sipIp;
         }else {
             return hookIp;
         }
